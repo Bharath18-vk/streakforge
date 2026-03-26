@@ -30,10 +30,18 @@ if TURSO_AUTH_TOKEN:
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set")
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True
-)
+try:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        connect_args={"check_same_thread": False}
+    )
+except Exception as e:
+    print(f"Warning: Engine creation error: {e}")
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -79,7 +87,7 @@ class StreakDB(Base):
     
     owner = relationship("UserDB", back_populates="streaks")
 
-Base.metadata.create_all(bind=engine)
+# Table creation deferred to startup event for serverless compatibility
 
 # --- Pydantic Schemas ---
 class UserCreate(BaseModel):
@@ -126,6 +134,13 @@ class StreakResponse(StreakBase):
 
 # --- FastAPI App ---
 app = FastAPI(title="StreakForge API")
+
+@app.on_event("startup")
+def on_startup():
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Could not create tables: {e}")
 
 app.add_middleware(
     CORSMiddleware,
