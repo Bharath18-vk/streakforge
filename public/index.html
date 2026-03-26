@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreakForge — Build Habits That Stick</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --bg: #09090f;
+  --surface: #111118;
+  --surface2: #18181f;
+  --surface3: #222230;
+  --border: #2a2a3a;
+  --border2: #35354a;
+  --primary: #7c6dff;
+  --primary-dim: rgba(124,109,255,0.15);
+  --primary-glow: rgba(124,109,255,0.4);
+  --accent: #ff6b6b;
+  --accent-dim: rgba(255,107,107,0.15);
+  --success: #00dba4;
+  --success-dim: rgba(0,219,164,0.12);
+  --gold: #ffd166;
+  --gold-dim: rgba(255,209,102,0.12);
+  --text: #e8e9f5;
+  --text-muted: #6b6d85;
+  --text-dim: #9899b0;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+}
+[data-theme="light"] {
+  --bg: #f4f4f8;
+  --surface: #ffffff;
+  --surface2: #f0f0f6;
+  --surface3: #e8e8f0;
+  --border: #dddde8;
+  --border2: #c8c8d8;
+  --text: #1a1a2e;
+  --text-muted: #8888a0;
+  --text-dim: #5a5a75;
+  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* Layout */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 16px; gap: 8px; position: fixed; height: 100vh; z-index: 100; transition: background 0.3s; }
+.main { margin-left: 240px; flex: 1; padding: 32px; max-width: calc(100vw - 240px); }
+
+/* Logo */
+.logo { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 16px; }
+.logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--primary), #b06dff); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 12px var(--primary-glow); }
+.logo-text { font-family: var(--font-display); font-weight: 800; font-size: 18px; background: linear-gradient(135deg, var(--primary), #b06dff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* Nav items */
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.2s; border: 1px solid transparent; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--primary-dim); color: var(--primary); border-color: rgba(124,109,255,0.2); }
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-badge { margin-left: auto; background: var(--accent); color: white; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 99px; }
+
+/* User card in sidebar */
+.user-card { margin-top: auto; background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-level { font-size: 11px; color: var(--text-muted); }
+.xp-bar { height: 3px; background: var(--border); border-radius: 99px; margin-top: 4px; overflow: hidden; }
+.xp-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #b06dff); border-radius: 99px; transition: width 0.5s ease; }
+
+/* Theme toggle */
+.theme-toggle { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--text-muted); transition: all 0.2s; }
+.theme-toggle:hover { background: var(--surface2); color: var(--text); }
+.toggle-switch { width: 36px; height: 20px; background: var(--border2); border-radius: 99px; position: relative; transition: background 0.2s; margin-left: auto; }
+.toggle-switch.on { background: var(--primary); }
+.toggle-knob { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: transform 0.2s; }
+.toggle-switch.on .toggle-knob { transform: translateX(16px); }
+
+/* Page header */
+.page-header { margin-bottom: 28px; }
+.page-title { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.page-subtitle { font-size: 14px; color: var(--text-muted); }
+
+/* Stats row */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; transition: border-color 0.2s, transform 0.2s; }
+.stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.stat-card.primary::before { background: linear-gradient(90deg, var(--primary), #b06dff); }
+.stat-card.accent::before { background: linear-gradient(90deg, var(--accent), #ff9f6b); }
+.stat-card.success::before { background: linear-gradient(90deg, var(--success), #00ffcc); }
+.stat-card.gold::before { background: linear-gradient(90deg, var(--gold), #ffaa33); }
+.stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.stat-value { font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.stat-icon { position: absolute; top: 16px; right: 16px; font-size: 22px; opacity: 0.6; }
+
+/* Section headers */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.section-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); }
+.section-action { font-size: 13px; color: var(--primary); cursor: pointer; font-weight: 500; background: var(--primary-dim); padding: 6px 12px; border-radius: 99px; border: none; transition: all 0.2s; }
+.section-action:hover { background: rgba(124,109,255,0.25); }
+
+/* Streak grid */
+.streak-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px; }
+
+/* Streak card */
+.streak-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden; }
+.streak-card:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: var(--shadow); }
+.streak-card.completed { border-color: rgba(0,219,164,0.3); background: var(--success-dim); }
+.streak-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.streak-icon-wrap { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.streak-actions { display: flex; gap: 6px; }
+.streak-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; }
+.streak-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 2px; color: var(--text); }
+.streak-category { font-size: 12px; color: var(--text-muted); }
+.streak-stats-row { display: flex; gap: 16px; margin: 12px 0; }
+.streak-stat { text-align: center; }
+.streak-stat-val { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+.streak-stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.streak-stat-sep { width: 1px; background: var(--border); }
+
+/* Check-in button */
+.checkin-btn { width: 100%; padding: 10px; border-radius: var(--radius-sm); border: none; font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 12px; }
+.checkin-btn.pending { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(124,109,255,0.3); }
+.checkin-btn.pending:hover { background: var(--primary); color: white; box-shadow: 0 4px 16px var(--primary-glow); }
+.checkin-btn.done { background: var(--success-dim); color: var(--success); border: 1px solid rgba(0,219,164,0.3); cursor: default; }
+
+/* Fire indicator */
+.fire-row { display: flex; align-items: center; gap: 4px; }
+.fire-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
+.fire-dot.active { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+
+/* Heatmap */
+.heatmap-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 28px; }
+.heatmap-grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 8px; }
+.heatmap-week { display: flex; flex-direction: column; gap: 3px; }
+.heatmap-cell { width: 12px; height: 12px; border-radius: 3px; transition: transform 0.2s; flex-shrink: 0; }
+.heatmap-cell:hover { transform: scale(1.4); cursor: pointer; }
+.heatmap-labels { display: flex; gap: 3px; margin-bottom: 6px; overflow-x: auto; }
+.heatmap-month-label { font-size: 11px; color: var(--text-muted); }
+.day-labels { display: flex; flex-direction: column; gap: 3px; margin-right: 6px; font-size: 10px; color: var(--text-muted); line-height: 12px; }
+
+/* Chart */
+.chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+.chart-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.chart-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.6s ease; min-width: 28px; }
+.chart-bar-label { font-size: 11px; color: var(--text-muted); }
+.chart-bar-val { font-size: 11px; font-weight: 600; color: var(--text-dim); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: fadeIn 0.2s ease; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 480px; max-width: 90vw; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+.modal-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+.modal-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+
+/* Form */
+.form-group { margin-bottom: 18px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+.form-input { width: 100%; padding: 11px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; transition: border-color 0.2s; }
+.form-input:focus { border-color: var(--primary); }
+.form-input::placeholder { color: var(--text-muted); }
+select.form-input { cursor: pointer; }
+.icon-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.icon-option { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: all 0.15s; background: var(--surface2); }
+.icon-option.selected { border-color: var(--primary); background: var(--primary-dim); }
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: all 0.15s; }
+.color-dot.selected { border-color: white; transform: scale(1.15); box-shadow: 0 0 8px rgba(255,255,255,0.3); }
+.btn-row { display: flex; gap: 10px; margin-top: 24px; }
+.btn { padding: 12px 24px; border-radius: var(--radius-sm); border: none; font-family: var(--font-body); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1; }
+.btn-primary { background: linear-gradient(135deg, var(--primary), #b06dff); color: white; box-shadow: 0 4px 16px var(--primary-glow); }
+.btn-primary:hover { box-shadow: 0 6px 24px var(--primary-glow); transform: translateY(-1px); }
+.btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--surface3); color: var(--text); }
+.btn-danger { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(255,107,107,0.3); }
+
+/* Achievements */
+.badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.badge-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; text-align: center; transition: all 0.2s; }
+.badge-card:hover { transform: translateY(-2px); }
+.badge-card.locked { opacity: 0.4; filter: grayscale(1); }
+.badge-icon { font-size: 36px; margin-bottom: 10px; }
+.badge-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.badge-desc { font-size: 11px; color: var(--text-muted); }
+.badge-earned { font-size: 10px; color: var(--success); font-weight: 600; margin-top: 6px; }
+
+/* AI Coach */
+.coach-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; height: calc(100vh - 200px); max-height: 600px; }
+.coach-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.coach-msg { display: flex; gap: 10px; align-items: flex-start; }
+.coach-msg.user { flex-direction: row-reverse; }
+.coach-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.coach-avatar.ai { background: linear-gradient(135deg, var(--primary), #b06dff); }
+.coach-avatar.user { background: linear-gradient(135deg, var(--accent), #ff9f6b); }
+.coach-bubble { max-width: 75%; padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
+.coach-bubble.ai { background: var(--surface2); color: var(--text); border-bottom-left-radius: 4px; }
+.coach-bubble.user { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+.coach-input-row { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+.coach-input { flex: 1; padding: 11px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; }
+.coach-input:focus { border-color: var(--primary); }
+.coach-send { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--primary); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+.coach-send:hover { box-shadow: 0 4px 12px var(--primary-glow); }
+.coach-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: typingBounce 1.2s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Progress ring */
+.ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.ring-text { position: absolute; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); }
+
+/* Freeze button */
+.freeze-btn { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #60b4ff; cursor: pointer; background: rgba(96,180,255,0.1); border: 1px solid rgba(96,180,255,0.2); border-radius: 99px; padding: 4px 10px; transition: all 0.2s; }
+.freeze-btn:hover { background: rgba(96,180,255,0.2); }
+
+/* Notification bar */
+.notif-bar { background: linear-gradient(135deg, var(--primary-dim), rgba(176,109,255,0.1)); border: 1px solid rgba(124,109,255,0.3); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 20px; font-size: 13px; color: var(--text-dim); }
+.notif-bar strong { color: var(--text); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 20px; }
+.tab { flex: 1; padding: 8px; text-align: center; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+/* Leaderboard */
+.leader-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-sm); transition: background 0.2s; }
+.leader-row:hover { background: var(--surface2); }
+.leader-rank { font-family: var(--font-display); font-size: 18px; font-weight: 800; width: 28px; text-align: center; color: var(--text-muted); }
+.leader-rank.gold { color: var(--gold); }
+.leader-rank.silver { color: #c0c0d0; }
+.leader-rank.bronze { color: #cd7f32; }
+.leader-av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.leader-info { flex: 1; }
+.leader-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.leader-xp { font-size: 12px; color: var(--text-muted); }
+.leader-streak { font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 16px; display: flex; align-items: center; gap: 4px; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes typingBounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+@keyframes checkBounce { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
+.float { animation: float 3s ease-in-out infinite; }
+.card-anim { animation: slideUp 0.4s ease both; }
+.card-anim:nth-child(1) { animation-delay: 0.05s; }
+.card-anim:nth-child(2) { animation-delay: 0.1s; }
+.card-anim:nth-child(3) { animation-delay: 0.15s; }
+.card-anim:nth-child(4) { animation-delay: 0.2s; }
+.card-anim:nth-child(5) { animation-delay: 0.25s; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+.empty-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.empty-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); font-size: 14px; color: var(--text); z-index: 9999; animation: slideUp 0.3s ease; max-width: 320px; }
+.toast-icon { font-size: 20px; }
+
+/* Insight cards */
+.insight-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.insight-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
+.insight-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.insight-val { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text); }
+.insight-change { font-size: 12px; margin-top: 4px; }
+.insight-change.up { color: var(--success); }
+.insight-change.down { color: var(--accent); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { width: 60px; padding: 16px 8px; }
+  .logo-text, .nav-item span, .user-info, .theme-toggle span { display: none; }
+  .main { margin-left: 60px; padding: 20px 16px; max-width: calc(100vw - 60px); }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .insight-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .streak-grid { grid-template-columns: 1fr; }
+}
+
+/* Streak detail panel */
+.detail-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.mini-heatmap { display: flex; flex-wrap: wrap; gap: 3px; }
+.mini-cell { width: 14px; height: 14px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+const today = () => new Date().toISOString().split('T')[0];
+
+function dateKey(daysAgo) {
+  const d = new Date(); d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
+}
+
+function generateHistory(completionRate = 0.75, days = 150, completed = false) {
+  const h = {};
+  for (let i = days; i >= 1; i--) h[dateKey(i)] = Math.random() < completionRate;
+  h[today()] = completed;
+  return h;
+}
+
+function calcStreak(history) {
+  let streak = 0;
+  const todayStr = today();
+  if (!history[todayStr]) {
+    let i = 1;
+    while (history[dateKey(i)]) { streak++; i++; }
+    return streak;
+  }
+  let i = 0;
+  while (history[dateKey(i)]) { streak++; i++; }
+  return streak;
+}
+
+function calcLongest(history) {
+  const vals = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
+  let best = 0, cur = 0;
+  for (const [, v] of vals) { if (v) { cur++; best = Math.max(best, cur); } else cur = 0; }
+  return best;
+}
+
+const LEVEL_NAMES = ['Seedling','Sprout','Sapling','Wanderer','Seeker','Achiever','Explorer','Warrior','Champion','Legend','Master','Grandmaster'];
+function levelInfo(xp) {
+  const level = Math.floor(xp / 500) + 1;
+  const capped = Math.min(level, LEVEL_NAMES.length);
+  const name = LEVEL_NAMES[capped - 1];
+  const xpInLevel = xp % 500;
+  const xpNeeded = 500;
+  return { level: capped, name, xpInLevel, xpNeeded };
+}
+
+const CATEGORY_COLORS = { Health: '#ff6b6b', Learning: '#7c6dff', Productivity: '#ffd166', Wellness: '#00dba4', Creative: '#ff9f6b', Finance: '#60b4ff' };
+const CATEGORY_ICONS = { Health: '💪', Learning: '📚', Productivity: '⚡', Wellness: '🧘', Creative: '🎨', Finance: '💰' };
+const ICONS = ['💪','📚','⚡','🧘','🎨','💰','🏃','🎯','✍️','🎵','💊','🧠','😴','🌱','💻','📝','🏋️','🥗','💆','🎸'];
+const COLORS = ['#ff6b6b','#7c6dff','#ffd166','#00dba4','#ff9f6b','#60b4ff','#ff6bcd','#00c9ff','#b06dff','#ffaa33'];
+
+// ─── Seed Data ────────────────────────────────────────────────────────────────
+function seedStreaks() {
+  const saved = localStorage.getItem('sf_streaks');
+  if (saved) return JSON.parse(saved);
+  return [
+    { id: 1, title: 'Morning Workout', category: 'Health', icon: '💪', color: '#ff6b6b', history: generateHistory(0.82, 150, false), freezesLeft: 2, frequency: 'daily', startDate: '2024-03-01', reminderTime: '07:00', active: true },
+    { id: 2, title: 'DSA Practice', category: 'Learning', icon: '💻', color: '#7c6dff', history: generateHistory(0.70, 120, true), freezesLeft: 1, frequency: 'daily', startDate: '2024-04-01', reminderTime: '20:00', active: true },
+    { id: 3, title: 'Meditation', category: 'Wellness', icon: '🧘', color: '#00dba4', history: generateHistory(0.90, 90, false), freezesLeft: 3, frequency: 'daily', startDate: '2024-05-01', reminderTime: '08:30', active: true },
+    { id: 4, title: 'Read 30 Pages', category: 'Learning', icon: '📚', color: '#b06dff', history: generateHistory(0.65, 60, false), freezesLeft: 2, frequency: 'daily', startDate: '2024-06-01', reminderTime: '21:00', active: true },
+    { id: 5, title: 'Budget Review', category: 'Finance', icon: '💰', color: '#ffd166', history: generateHistory(0.85, 180, false), freezesLeft: 2, frequency: 'daily', startDate: '2024-01-01', reminderTime: '18:00', active: true },
+  ];
+}
+
+const BADGES = [
+  { id: 'first_step', icon: '🌱', name: 'First Step', desc: 'Complete your first habit', condition: s => s.some(x => x.history[today()]) },
+  { id: 'hot_streak', icon: '🔥', name: 'Hot Streak', desc: '7-day streak on any habit', condition: s => s.some(x => calcStreak(x.history) >= 7) },
+  { id: 'on_fire', icon: '🌋', name: 'On Fire', desc: '30-day streak on any habit', condition: s => s.some(x => calcStreak(x.history) >= 30) },
+  { id: 'centurion', icon: '💯', name: 'Centurion', desc: '100-day streak', condition: s => s.some(x => calcStreak(x.history) >= 100) },
+  { id: 'multitasker', icon: '🎭', name: 'Multitasker', desc: 'Track 5+ habits', condition: s => s.length >= 5 },
+  { id: 'perfectionist', icon: '✨', name: 'Perfectionist', desc: '100% completion this week', condition: s => {
+    const count = s.reduce((acc, x) => {
+      for (let i = 0; i < 7; i++) if (x.history[dateKey(i)]) acc++;
+      return acc;
+    }, 0);
+    return count >= s.length * 7;
+  }},
+  { id: 'early_bird', icon: '🐦', name: 'Early Bird', desc: 'Check in before 9am', condition: () => new Date().getHours() < 9 },
+  { id: 'iron_will', icon: '⚔️', name: 'Iron Will', desc: '365-day streak', condition: s => s.some(x => calcStreak(x.history) >= 365) },
+  { id: 'legend', icon: '👑', name: 'Legend', desc: 'Reach Level 10', condition: (_, xp) => levelInfo(xp).level >= 10 },
+  { id: 'collector', icon: '🏆', name: 'Collector', desc: 'Earn 5 other badges', condition: () => false },
+];
+
+const LEADERBOARD = [
+  { name: 'Priya K.', avatar: '🦁', xp: 12400, streak: 87, color: '#ff6b6b' },
+  { name: 'Alex M.', avatar: '🦊', xp: 8900, streak: 54, color: '#7c6dff' },
+  { name: 'Jordan L.', avatar: '🐺', xp: 7200, streak: 42, color: '#00dba4' },
+  { name: 'Sam R.', avatar: '🦅', xp: 5100, streak: 31, color: '#ffd166' },
+  { name: 'Mia C.', avatar: '🐬', xp: 3800, streak: 21, color: '#ff9f6b' },
+];
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function ProgressRing({ pct, size = 80, stroke = 7, color = 'var(--primary)' }) {
+  const r = (size - stroke * 2) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  return (
+    <div className="ring-wrap" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
+      </svg>
+      <span className="ring-text" style={{ fontSize: size * 0.2, color }}>{pct}%</span>
+    </div>
+  );
+}
+
+function HeatMap({ history, compact = false }) {
+  const weeks = [];
+  const totalDays = compact ? 56 : 140;
+  const days = [];
+  for (let i = totalDays; i >= 0; i--) {
+    const key = dateKey(i);
+    days.push({ key, val: history[key] });
+  }
+  // group into weeks
+  const chunked = [];
+  for (let i = 0; i < days.length; i += 7) chunked.push(days.slice(i, i + 7));
+
+  const getColor = (val, key) => {
+    if (key > today()) return 'var(--surface3)';
+    if (val === undefined) return 'var(--surface3)';
+    if (!val) return 'var(--border)';
+    return 'var(--success)';
+  };
+
+  if (compact) {
+    return (
+      <div className="mini-heatmap">
+        {days.map(({ key, val }) => (
+          <div key={key} className="mini-cell" style={{ background: getColor(val, key), opacity: val ? 1 : 0.5 }} title={key} />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="heatmap-grid">
+      <div className="day-labels" style={{ marginTop: 2 }}>
+        {['','M','','W','','F',''].map((d, i) => <span key={i} style={{ height: 12, display: 'block' }}>{d}</span>)}
+      </div>
+      {chunked.map((week, wi) => (
+        <div key={wi} className="heatmap-week">
+          {week.map(({ key, val }) => (
+            <div key={key} className="heatmap-cell" title={key}
+              style={{ background: getColor(val, key), opacity: val ? 1 : (key <= today() ? 0.6 : 0.2) }} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WeekChart({ streaks }) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const today_ = new Date();
+  const bars = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today_); d.setDate(today_.getDate() - (6 - i));
+    const key = d.toISOString().split('T')[0];
+    const total = streaks.length;
+    const done = streaks.filter(s => s.history[key]).length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    return { day: days[d.getDay()], pct, done, total };
+  });
+  const max = 100;
+  return (
+    <div className="chart-bars">
+      {bars.map((b, i) => (
+        <div key={i} className="chart-bar-wrap">
+          <div className="chart-bar-val">{b.pct > 0 ? b.pct + '%' : ''}</div>
+          <div className="chart-bar" style={{
+            height: `${(b.pct / max) * 90}px`,
+            background: b.pct >= 80 ? 'var(--success)' : b.pct >= 50 ? 'var(--primary)' : 'var(--border2)',
+            opacity: i === 6 ? 1 : 0.75
+          }} />
+          <div className="chart-bar-label">{b.day}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Toast({ msg, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, []);
+  return (
+    <div className="toast">
+      <span className="toast-icon">{msg.icon || '✅'}</span>
+      <span>{msg.text}</span>
+    </div>
+  );
+}
+
+// ─── Create Modal ─────────────────────────────────────────────────────────────
+function CreateModal({ onClose, onCreate }) {
+  const [form, setForm] = useState({ title: '', category: 'Health', icon: '💪', color: '#ff6b6b', frequency: 'daily', reminderTime: '08:00' });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = () => {
+    if (!form.title.trim()) return;
+    const history = {};
+    history[today()] = false;
+    onCreate({ ...form, id: Date.now(), history, freezesLeft: 3, active: true, startDate: today() });
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-title">New Habit 🌱</div>
+        <div className="modal-subtitle">Define your habit and start building momentum today.</div>
+
+        <div className="form-group">
+          <label className="form-label">Habit Name</label>
+          <input className="form-input" placeholder="e.g. Morning Run, Learn Spanish..." value={form.title} onChange={e => set('title', e.target.value)} autoFocus />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Category</label>
+          <select className="form-input" value={form.category} onChange={e => { set('category', e.target.value); set('icon', CATEGORY_ICONS[e.target.value]); set('color', CATEGORY_COLORS[e.target.value]); }}>
+            {Object.keys(CATEGORY_COLORS).map(c => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Icon</label>
+          <div className="icon-picker">
+            {ICONS.map(ic => (
+              <div key={ic} className={`icon-option ${form.icon === ic ? 'selected' : ''}`} onClick={() => set('icon', ic)}>{ic}</div>
+            ))}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Color</label>
+          <div className="color-picker">
+            {COLORS.map(c => (
+              <div key={c} className={`color-dot ${form.color === c ? 'selected' : ''}`} style={{ background: c }} onClick={() => set('color', c)} />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="form-group">
+            <label className="form-label">Frequency</label>
+            <select className="form-input" value={form.frequency} onChange={e => set('frequency', e.target.value)}>
+              <option value="daily">Daily</option>
+              <option value="weekdays">Weekdays</option>
+              <option value="weekends">Weekends</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Reminder</label>
+            <input type="time" className="form-input" value={form.reminderTime} onChange={e => set('reminderTime', e.target.value)} />
+          </div>
+        </div>
+
+        <div className="btn-row">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSubmit}>Create Habit 🚀</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Streak Detail Modal ──────────────────────────────────────────────────────
+function DetailModal({ streak, onClose, onDelete, onFreeze }) {
+  const cur = calcStreak(streak.history);
+  const longest = calcLongest(streak.history);
+  const completedDays = Object.values(streak.history).filter(Boolean).length;
+  const totalDays = Object.keys(streak.history).length;
+  const rate = totalDays ? Math.round((completedDays / totalDays) * 100) : 0;
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+          <div className="streak-icon-wrap" style={{ background: streak.color + '22', width: 56, height: 56, fontSize: 28 }}>{streak.icon}</div>
+          <div>
+            <div className="modal-title" style={{ marginBottom: 2 }}>{streak.title}</div>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--surface2)', padding: '3px 10px', borderRadius: 99, border: '1px solid var(--border)' }}>{streak.category}</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { label: 'Current', val: cur + '🔥', color: 'var(--accent)' },
+            { label: 'Longest', val: longest, color: 'var(--gold)' },
+            { label: 'Success Rate', val: rate + '%', color: 'var(--success)' },
+          ].map(s => (
+            <div key={s.label} className="insight-card" style={{ textAlign: 'center' }}>
+              <div className="insight-label">{s.label}</div>
+              <div className="insight-val" style={{ color: s.color }}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Last 8 Weeks</label>
+          <HeatMap history={streak.history} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+          {streak.freezesLeft > 0 && (
+            <button className="freeze-btn" onClick={() => { onFreeze(streak.id); onClose(); }}>
+              🧊 Use Freeze ({streak.freezesLeft} left)
+            </button>
+          )}
+        </div>
+
+        <div className="btn-row">
+          <button className="btn btn-danger" onClick={() => { onDelete(streak.id); onClose(); }}>Delete</button>
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI Coach ────────────────────────────────────────────────────────────────
+function CoachView({ streaks }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: "Hey! I'm your AI habit coach 🧠✨ I can analyze your streaks, suggest new habits, predict burnout risks, and keep you motivated. What would you like help with?" }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const QUICK = ['Analyze my progress', 'Suggest a new habit', 'Burnout risk check', 'Motivate me!'];
+
+  const send = async (text) => {
+    if (!text.trim() || loading) return;
+    const userMsg = { role: 'user', content: text };
+    setMessages(m => [...m, userMsg]);
+    setInput('');
+    setLoading(true);
+
+    const statsBlock = streaks.map(s => {
+      const cur = calcStreak(s.history);
+      const rate = Math.round((Object.values(s.history).filter(Boolean).length / Math.max(Object.keys(s.history).length, 1)) * 100);
+      return `• ${s.title} (${s.category}): ${cur}-day streak, ${rate}% success rate`;
+    }).join('\n');
+
+    const systemPrompt = `You are StreakForge's AI habit coach — energetic, insightful, and concise. User's habits:\n${statsBlock}\nKeep responses under 120 words. Use 1-2 emojis max. Be specific and actionable. No filler phrases.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          system: systemPrompt,
+          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "I couldn't process that. Try again!";
+      setMessages(m => [...m, { role: 'assistant', content: reply }]);
+    } catch (e) {
+      setMessages(m => [...m, { role: 'assistant', content: "Connection issue. Make sure you're using Claude.ai for AI features. Your stats look great though — keep going! 💪" }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">AI Coach 🧠</div>
+        <div className="page-subtitle">Personalized guidance powered by Claude</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        {QUICK.map(q => (
+          <button key={q} className="section-action" onClick={() => send(q)}>{q}</button>
+        ))}
+      </div>
+
+      <div className="coach-wrap">
+        <div className="coach-messages">
+          {messages.map((m, i) => (
+            <div key={i} className={`coach-msg ${m.role}`}>
+              <div className={`coach-avatar ${m.role === 'assistant' ? 'ai' : 'user'}`}>
+                {m.role === 'assistant' ? '🧠' : '🦊'}
+              </div>
+              <div className={`coach-bubble ${m.role === 'assistant' ? 'ai' : 'user'}`}>
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="coach-msg assistant">
+              <div className="coach-avatar ai">🧠</div>
+              <div className="coach-bubble ai">
+                <div className="typing-indicator">
+                  <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+        <div className="coach-input-row">
+          <input className="coach-input" placeholder="Ask anything about your habits..." value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && send(input)} />
+          <button className="coach-send" onClick={() => send(input)} disabled={loading || !input.trim()}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m22 2-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Analytics View ───────────────────────────────────────────────────────────
+function AnalyticsView({ streaks }) {
+  const [tab, setTab] = useState('overview');
+
+  const totalCompleted = streaks.reduce((acc, s) => acc + Object.values(s.history).filter(Boolean).length, 0);
+  const todayCompleted = streaks.filter(s => s.history[today()]).length;
+  const avgStreak = streaks.length ? Math.round(streaks.reduce((a, s) => a + calcStreak(s.history), 0) / streaks.length) : 0;
+
+  // Consistency score: avg of last 30 days
+  const consistencyScore = () => {
+    if (!streaks.length) return 0;
+    let total = 0;
+    for (let i = 0; i < 30; i++) {
+      const key = dateKey(i);
+      const done = streaks.filter(s => s.history[key]).length;
+      total += done / streaks.length;
+    }
+    return Math.round((total / 30) * 100);
+  };
+  const score = consistencyScore();
+
+  // Weekly trend
+  const thisWeek = (() => {
+    let t = 0;
+    for (let i = 0; i < 7; i++) t += streaks.filter(s => s.history[dateKey(i)]).length;
+    return streaks.length ? Math.round((t / (7 * streaks.length)) * 100) : 0;
+  })();
+  const lastWeek = (() => {
+    let t = 0;
+    for (let i = 7; i < 14; i++) t += streaks.filter(s => s.history[dateKey(i)]).length;
+    return streaks.length ? Math.round((t / (7 * streaks.length)) * 100) : 0;
+  })();
+  const trend = thisWeek - lastWeek;
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">Analytics 📊</div>
+        <div className="page-subtitle">Deep dive into your habit performance</div>
+      </div>
+
+      <div className="tabs">
+        {['overview','weekly','streaks','leaderboard'].map(t2 => (
+          <div key={t2} className={`tab ${tab === t2 ? 'active' : ''}`} onClick={() => setTab(t2)}>
+            {t2.charAt(0).toUpperCase() + t2.slice(1)}
+          </div>
+        ))}
+      </div>
+
+      {tab === 'overview' && (
+        <>
+          <div className="insight-row">
+            <div className="insight-card">
+              <div className="insight-label">Consistency Score</div>
+              <div className="insight-val" style={{ color: score >= 75 ? 'var(--success)' : score >= 50 ? 'var(--gold)' : 'var(--accent)' }}>{score}%</div>
+              <div className={`insight-change ${trend >= 0 ? 'up' : 'down'}`}>{trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% vs last week</div>
+            </div>
+            <div className="insight-card">
+              <div className="insight-label">Avg. Active Streak</div>
+              <div className="insight-val" style={{ color: 'var(--accent)' }}>{avgStreak}🔥</div>
+              <div className="insight-change up">days in a row</div>
+            </div>
+            <div className="insight-card">
+              <div className="insight-label">Total Check-ins</div>
+              <div className="insight-val" style={{ color: 'var(--primary)' }}>{totalCompleted}</div>
+              <div className="insight-change up">all time</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="chart-wrap">
+              <div className="section-header"><div className="section-title">This Week</div></div>
+              <WeekChart streaks={streaks} />
+            </div>
+            <div className="chart-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <div className="section-title">Today's Progress</div>
+              <ProgressRing pct={streaks.length ? Math.round((todayCompleted / streaks.length) * 100) : 0} size={120} stroke={10} color="var(--success)" />
+              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{todayCompleted} of {streaks.length} completed</div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === 'weekly' && (
+        <div>
+          <div className="heatmap-wrap">
+            <div className="section-header">
+              <div className="section-title">All Habits — Contribution Map</div>
+            </div>
+            <HeatMap history={(() => {
+              const merged = {};
+              for (let i = 0; i <= 140; i++) {
+                const key = dateKey(i);
+                const done = streaks.filter(s => s.history[key]).length;
+                merged[key] = done > 0 ? true : false;
+              }
+              return merged;
+            })()} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+              <span>Less</span>
+              {['var(--border)', 'var(--success)'].map((c, i) => (
+                <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: c }} />
+              ))}
+              <span>More</span>
+            </div>
+          </div>
+
+          <div className="chart-wrap" style={{ marginTop: 16 }}>
+            <div className="section-header"><div className="section-title">7-Day Performance</div></div>
+            <WeekChart streaks={streaks} />
+          </div>
+        </div>
+      )}
+
+      {tab === 'streaks' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[...streaks].sort((a, b) => calcStreak(b.history) - calcStreak(a.history)).map(s => {
+            const cur = calcStreak(s.history);
+            const longest = calcLongest(s.history);
+            const rate = Math.round((Object.values(s.history).filter(Boolean).length / Math.max(Object.keys(s.history).length, 1)) * 100);
+            return (
+              <div key={s.id} className="chart-wrap">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{s.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{s.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.category}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 20 }}>
+                    {[{ l: 'Current', v: cur + '🔥' }, { l: 'Best', v: longest }, { l: 'Rate', v: rate + '%' }].map(x => (
+                      <div key={x.l} style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 800, color: 'var(--text)' }}>{x.v}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{x.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: rate + '%', background: s.color, borderRadius: 99, transition: 'width 0.8s ease' }} />
+                </div>
+                <div style={{ marginTop: 12 }}><HeatMap history={s.history} compact /></div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === 'leaderboard' && (
+        <div className="chart-wrap">
+          <div className="section-header">
+            <div className="section-title">🏆 Global Leaderboard</div>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>This month</span>
+          </div>
+          {[{ name: 'Alex M.', avatar: '🦊', xp: 8900, streak: 54, color: '#7c6dff', you: true }, ...LEADERBOARD.filter(l => l.name !== 'Alex M.')].sort((a, b) => b.xp - a.xp).map((l, i) => (
+            <div key={l.name} className="leader-row" style={l.you ? { background: 'var(--primary-dim)', borderRadius: 'var(--radius-sm)' } : {}}>
+              <div className={`leader-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}`}>
+                {i < 3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`}
+              </div>
+              <div className="leader-av" style={{ background: l.color + '33' }}>{l.avatar}</div>
+              <div className="leader-info">
+                <div className="leader-name">{l.name} {l.you && <span style={{ fontSize: 11, color: 'var(--primary)', background: 'var(--primary-dim)', padding: '1px 6px', borderRadius: 99, marginLeft: 6 }}>You</span>}</div>
+                <div className="leader-xp">{l.xp.toLocaleString()} XP</div>
+              </div>
+              <div className="leader-streak">{l.streak} 🔥</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Achievements View ────────────────────────────────────────────────────────
+function AchievementsView({ streaks, totalXp }) {
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">Achievements 🏆</div>
+        <div className="page-subtitle">Unlock badges by building powerful habits</div>
+      </div>
+
+      <div className="stats-row" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 24 }}>
+        {[
+          { label: 'Badges Earned', value: BADGES.filter(b => b.condition(streaks, totalXp)).length, icon: '🏅', type: 'primary' },
+          { label: 'Total XP', value: totalXp.toLocaleString(), icon: '⚡', type: 'gold' },
+          { label: 'Level', value: levelInfo(totalXp).name, icon: '👑', type: 'accent' },
+        ].map(s => (
+          <div key={s.label} className={`stat-card ${s.type}`}>
+            <div className="stat-icon">{s.icon}</div>
+            <div className="stat-label">{s.label}</div>
+            <div className="stat-value" style={{ fontSize: typeof s.value === 'string' && s.value.length > 6 ? 20 : 32 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="badges-grid">
+        {BADGES.map(b => {
+          const earned = b.condition(streaks, totalXp);
+          return (
+            <div key={b.id} className={`badge-card ${earned ? '' : 'locked'}`}>
+              <div className="badge-icon" style={{ filter: earned ? 'drop-shadow(0 0 8px rgba(255,209,102,0.6))' : 'none' }}>{b.icon}</div>
+              <div className="badge-name">{b.name}</div>
+              <div className="badge-desc">{b.desc}</div>
+              {earned && <div className="badge-earned">✓ Earned!</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+function Dashboard({ streaks, onCheckIn, setView, setShowCreate, showToast, totalXp, user }) {
+  const todayStr = today();
+  const completedToday = streaks.filter(s => s.history[todayStr]).length;
+  const pct = streaks.length ? Math.round((completedToday / streaks.length) * 100) : 0;
+  const lvl = levelInfo(totalXp);
+  const atRisk = streaks.filter(s => !s.history[todayStr] && calcStreak(s.history) > 0);
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">{greeting()}, {user?.username} 👋</div>
+        <div className="page-subtitle">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+      </div>
+
+      {atRisk.length > 0 && (
+        <div className="notif-bar">
+          ⚠️ <strong>{atRisk.length} streak{atRisk.length > 1 ? 's' : ''} at risk:</strong> {atRisk.map(s => s.title).join(', ')} — check in now!
+        </div>
+      )}
+
+      <div className="stats-row card-anim">
+        <div className="stat-card primary">
+          <div className="stat-icon">📅</div>
+          <div className="stat-label">Today's Progress</div>
+          <div className="stat-value">{pct}%</div>
+          <div className="stat-sub">{completedToday}/{streaks.length} habits done</div>
+        </div>
+        <div className="stat-card accent">
+          <div className="stat-icon">🔥</div>
+          <div className="stat-label">Best Streak</div>
+          <div className="stat-value">{streaks.length ? Math.max(...streaks.map(s => calcStreak(s.history))) : 0}</div>
+          <div className="stat-sub">days in a row</div>
+        </div>
+        <div className="stat-card success">
+          <div className="stat-icon">⚡</div>
+          <div className="stat-label">Total XP</div>
+          <div className="stat-value">{totalXp.toLocaleString()}</div>
+          <div className="stat-sub">Level {lvl.level} · {lvl.name}</div>
+        </div>
+        <div className="stat-card gold">
+          <div className="stat-icon">🏆</div>
+          <div className="stat-label">Habits Tracked</div>
+          <div className="stat-value">{streaks.length}</div>
+          <div className="stat-sub">{BADGES.filter(b => b.condition(streaks, totalXp)).length} badges earned</div>
+        </div>
+      </div>
+
+      <div className="section-header">
+        <div className="section-title">Today's Habits</div>
+        <button className="section-action" onClick={() => setShowCreate(true)}>+ Add Habit</button>
+      </div>
+
+      {streaks.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">🌱</div>
+          <div className="empty-title">No habits yet</div>
+          <div className="empty-sub">Start your streak journey today!</div>
+          <button className="btn btn-primary" style={{ width: 'auto', padding: '12px 28px' }} onClick={() => setShowCreate(true)}>Create First Habit</button>
+        </div>
+      ) : (
+        <div className="streak-grid">
+          {streaks.map((s, i) => {
+            const cur = calcStreak(s.history);
+            const done = s.history[todayStr];
+            return (
+              <div key={s.id} className={`streak-card card-anim ${done ? 'completed' : ''}`}
+                style={{ animationDelay: `${i * 0.05}s` }}>
+                <div className="streak-card-header">
+                  <div className="streak-icon-wrap" style={{ background: s.color + '22' }}>{s.icon}</div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {cur >= 7 && <span className="streak-badge" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>🔥 HOT</span>}
+                    {done && <span className="streak-badge" style={{ background: 'var(--success-dim)', color: 'var(--success)' }}>✓ DONE</span>}
+                  </div>
+                </div>
+                <div className="streak-title">{s.title}</div>
+                <div className="streak-category">{s.category} · {s.frequency}</div>
+                <div className="streak-stats-row">
+                  <div className="streak-stat">
+                    <div className="streak-stat-val" style={{ color: 'var(--accent)' }}>{cur}</div>
+                    <div className="streak-stat-lbl">Current 🔥</div>
+                  </div>
+                  <div className="streak-stat-sep" />
+                  <div className="streak-stat">
+                    <div className="streak-stat-val" style={{ color: 'var(--gold)' }}>{calcLongest(s.history)}</div>
+                    <div className="streak-stat-lbl">Best 🏆</div>
+                  </div>
+                  <div className="streak-stat-sep" />
+                  <div className="streak-stat">
+                    <div className="streak-stat-val" style={{ color: 'var(--primary)' }}>
+                      {Math.round((Object.values(s.history).filter(Boolean).length / Math.max(Object.keys(s.history).length, 1)) * 100)}%
+                    </div>
+                    <div className="streak-stat-lbl">Rate</div>
+                  </div>
+                </div>
+                <div className="fire-row" style={{ marginBottom: 4 }}>
+                  {Array.from({ length: 7 }, (_, i2) => {
+                    const key = dateKey(6 - i2);
+                    return <div key={i2} className={`fire-dot ${s.history[key] ? 'active' : ''}`} title={key} />;
+                  })}
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>last 7 days</span>
+                </div>
+                <button
+                  className={`checkin-btn ${done ? 'done' : 'pending'}`}
+                  onClick={(e) => { e.stopPropagation(); if (!done) onCheckIn(s); }}
+                  style={done ? { animation: 'checkBounce 0.4s ease' } : {}}
+                >
+                  {done ? '✅ Completed today!' : '☐ Mark complete'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {streaks.length > 0 && (
+        <div className="heatmap-wrap">
+          <div className="section-header">
+            <div className="section-title">Activity Heatmap</div>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Last 20 weeks</span>
+          </div>
+          <HeatMap history={(() => {
+            const merged = {};
+            for (let i = 0; i <= 140; i++) {
+              const key = dateKey(i);
+              const done = streaks.filter(s => s.history[key]).length;
+              merged[key] = done > 0;
+            }
+            return merged;
+          })()} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Habits View ──────────────────────────────────────────────────────────────
+function HabitsView({ streaks, onDelete, onFreeze, setShowCreate, showToast }) {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">My Habits 📋</div>
+        <div className="page-subtitle">Manage and track all your habits</div>
+      </div>
+
+      <div className="section-header">
+        <div className="section-title">{streaks.length} Active Habit{streaks.length !== 1 ? 's' : ''}</div>
+        <button className="section-action" onClick={() => setShowCreate(true)}>+ New Habit</button>
+      </div>
+
+      {streaks.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">🎯</div>
+          <div className="empty-title">No habits yet</div>
+          <div className="empty-sub">Build your first habit to start your streak journey!</div>
+          <button className="btn btn-primary" style={{ width: 'auto', padding: '12px 28px' }} onClick={() => setShowCreate(true)}>Create Habit</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {streaks.map((s, i) => {
+            const cur = calcStreak(s.history);
+            const rate = Math.round((Object.values(s.history).filter(Boolean).length / Math.max(Object.keys(s.history).length, 1)) * 100);
+            return (
+              <div key={s.id} className="chart-wrap card-anim" style={{ animationDelay: `${i * 0.05}s`, cursor: 'pointer' }}
+                onClick={() => setSelected(s)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div className="streak-icon-wrap" style={{ background: s.color + '22', width: 48, height: 48, fontSize: 24 }}>{s.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{s.title}</span>
+                      <span style={{ fontSize: 11, background: 'var(--surface2)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: 99, border: '1px solid var(--border)' }}>{s.category}</span>
+                      {s.history[today()] && <span style={{ fontSize: 11, background: 'var(--success-dim)', color: 'var(--success)', padding: '2px 8px', borderRadius: 99 }}>✓ Today</span>}
+                      {s.freezesLeft > 0 && <span style={{ fontSize: 11, background: 'rgba(96,180,255,0.1)', color: '#60b4ff', padding: '2px 8px', borderRadius: 99 }}>🧊 {s.freezesLeft}</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>🔥 <strong style={{ color: 'var(--accent)' }}>{cur}</strong> streak</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>📊 <strong style={{ color: 'var(--text)' }}>{rate}%</strong> rate</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>⏰ {s.reminderTime}</span>
+                    </div>
+                    <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, marginTop: 10, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: rate + '%', background: s.color, borderRadius: 99, transition: 'width 0.8s ease' }} />
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Last 7 days</div>
+                    <div className="fire-row" style={{ justifyContent: 'flex-end' }}>
+                      {Array.from({ length: 7 }, (_, idx) => {
+                        const key = dateKey(6 - idx);
+                        return <div key={idx} className={`fire-dot ${s.history[key] ? 'active' : ''}`} />;
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selected && (
+        <DetailModal streak={selected} onClose={() => setSelected(null)} onDelete={onDelete} onFreeze={onFreeze} />
+      )}
+    </div>
+  );
+}
+
+// ─── Root App ─────────────────────────────────────────────────────────────────
+function App() {
+  const [streaks, setStreaks] = useState([]);
+  const [view, setView] = useState('dashboard');
+  const [showCreate, setShowCreate] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('sf_theme') || 'dark');
+  const [toast, setToast] = useState(null);
+  
+  // Auth state
+  const [token, setToken] = useState(() => localStorage.getItem('sf_token') || null);
+  const [user, setUser] = useState(null);
+  const [authView, setAuthView] = useState('login');
+  const [authForm, setAuthForm] = useState({ username: '', password: '' });
+  const [authError, setAuthError] = useState('');
+
+  const showToast = useCallback((msg) => { setToast(msg); }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('sf_theme', theme);
+  }, [theme]);
+
+  const fetchStreaks = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/streaks', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStreaks(data);
+      } else if (res.status === 401) {
+        logout();
+      }
+    } catch(e) { console.error('Failed to fetch streaks', e); }
+  };
+
+  const fetchUser = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/users/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      } else { logout(); }
+    } catch(e) { console.error('Failed to fetch user', e); }
+  };
+
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('sf_token', token);
+      fetchUser();
+      fetchStreaks();
+    } else {
+      localStorage.removeItem('sf_token');
+      setUser(null);
+      setStreaks([]);
+    }
+  }, [token]);
+
+  const handleAuth = async () => {
+    setAuthError('');
+    if (!authForm.username || !authForm.password) {
+      setAuthError('Please fill in all fields'); return;
+    }
+    
+    try {
+      const params = new URLSearchParams();
+      params.append('username', authForm.username);
+      params.append('password', authForm.password);
+
+      const endpoint = authView === 'login' ? '/token' : '/register';
+      const body_data = authView === 'login' ? params : JSON.stringify({ username: authForm.username, password: authForm.password });
+      const headers = authView === 'login' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : { 'Content-Type': 'application/json' };
+      
+      const res = await fetch(endpoint, { method: 'POST', headers, body: body_data });
+      const data = await res.json();
+      if (res.ok) {
+        setToken(data.access_token);
+        setAuthForm({ username: '', password: '' });
+      } else {
+        setAuthError(data.detail || 'Authentication failed');
+      }
+    } catch (e) { setAuthError('Network error'); }
+  };
+
+  const logout = () => { setToken(null); };
+
+  const addStreak = async (newStreak) => {
+    try {
+      const res = await fetch('/api/streaks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(newStreak)
+      });
+      if (res.ok) {
+        fetchStreaks();
+        showToast({ icon: '🌱', text: 'New habit created! Start your streak today.' });
+      }
+    } catch(e) { console.error('Failed to add streak', e); }
+  };
+
+  const checkIn = async (streak) => {
+    const todayStr = today();
+    const newHistory = { ...streak.history, [todayStr]: true };
+    try {
+      const res = await fetch(`/api/streaks/${streak.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...streak, history: newHistory })
+      });
+      if (res.ok) {
+        setStreaks(prev => prev.map(s => s.id === streak.id ? {...s, history: newHistory} : s));
+        showToast({ icon: '🔥', text: '+15 XP — Keep it up!' });
+      }
+    } catch(e) { console.error('Failed to check in', e); }
+  };
+
+  const del = async (id) => {
+    try {
+      const res = await fetch(`/api/streaks/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setStreaks(prev => prev.filter(s => s.id !== id));
+        showToast({ icon: '🗑️', text: 'Habit deleted' });
+      }
+    } catch(e) { console.error('Failed to delete', e); }
+  };
+
+  const freeze = async (id) => {
+    const streak = streaks.find(s => s.id === id);
+    if (!streak) return;
+    const newHistory = { ...streak.history, [today()]: true };
+    try {
+      const res = await fetch(`/api/streaks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...streak, history: newHistory, freezesLeft: streak.freezesLeft - 1 })
+      });
+      if (res.ok) {
+        fetchStreaks();
+        showToast({ icon: '🧊', text: 'Streak freeze used! Day saved.' });
+      }
+    } catch(e) { console.error('Failed to freeze', e); }
+  };
+
+  // --- Auth View UI ---
+  if (!token || !user) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
+        <div className="chart-wrap" style={{ width: 400, maxWidth: '90vw' }}>
+          <div className="logo" style={{ justifyContent: 'center', marginBottom: 30 }}>
+            <div className="logo-icon float">🔥</div>
+            <span className="logo-text" style={{ fontSize: 24 }}>StreakForge</span>
+          </div>
+          <div className="page-title" style={{ textAlign: 'center', marginBottom: 20 }}>
+            {authView === 'login' ? 'Welcome Back' : 'Create Account'}
+          </div>
+          {authError && <div style={{ color: 'var(--accent)', background: 'var(--accent-dim)', padding: '10px', borderRadius: '8px', marginBottom: '16px', fontSize: 13, textAlign: 'center' }}>{authError}</div>}
+          <div className="form-group">
+            <label className="form-label">Username</label>
+            <input className="form-input" value={authForm.username} onChange={e => setAuthForm(f => ({...f, username: e.target.value}))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" value={authForm.password} onChange={e => setAuthForm(f => ({...f, password: e.target.value}))} 
+              onKeyDown={e => e.key === 'Enter' && handleAuth()} />
+          </div>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleAuth}>
+            {authView === 'login' ? 'Log In' : 'Sign Up'}
+          </button>
+          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: 'var(--text-muted)' }}>
+            {authView === 'login' ? "Don't have an account? " : "Already have an account? "}
+            <span style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }} onClick={() => setAuthView(authView === 'login' ? 'register' : 'login')}>
+              {authView === 'login' ? 'Sign up' : 'Log in'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const totalXp = streaks.reduce((acc, s) => {
+    const done = Object.values(s.history).filter(Boolean).length;
+    return acc + done * 15;
+  }, 0);
+
+  const navItems = [
+    { id: 'dashboard', icon: '⚡', label: 'Dashboard' },
+    { id: 'habits', icon: '📋', label: 'My Habits' },
+    { id: 'analytics', icon: '📊', label: 'Analytics' },
+    { id: 'achievements', icon: '🏆', label: 'Achievements' },
+    { id: 'coach', icon: '🧠', label: 'AI Coach' },
+  ];
+
+  const lvl = levelInfo(totalXp);
+  const uncompleted = streaks.filter(s => !s.history[today()]).length;
+
+  return (
+    <div className="app">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="logo">
+          <div className="logo-icon float">🔥</div>
+          <span className="logo-text">StreakForge</span>
+        </div>
+
+        {navItems.map(n => (
+          <div key={n.id} className={`nav-item ${view === n.id ? 'active' : ''}`} onClick={() => setView(n.id)}>
+            <span className="nav-icon">{n.icon}</span>
+            <span>{n.label}</span>
+            {n.id === 'habits' && uncompleted > 0 && <span className="nav-badge">{uncompleted}</span>}
+          </div>
+        ))}
+        
+        <div className="nav-item" onClick={logout} style={{ marginTop: 'auto', marginBottom: 16 }}>
+          <span className="nav-icon">🚪</span>
+          <span>Logout</span>
+        </div>
+
+        <div className="theme-toggle" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>
+          <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          <div className={`toggle-switch ${theme === 'light' ? 'on' : ''}`}><div className="toggle-knob" /></div>
+        </div>
+
+        <div className="user-card" style={{ marginTop: 0 }}>
+          <div className="user-avatar">
+            {user.username.charAt(0).toUpperCase()}
+          </div>
+          <div className="user-info">
+            <div className="user-name">{user.username}</div>
+            <div className="user-level">Lv.{lvl.level} {lvl.name}</div>
+            <div className="xp-bar"><div className="xp-fill" style={{ width: `${(lvl.xpInLevel / lvl.xpNeeded) * 100}%` }} /></div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="main">
+        {view === 'dashboard' && <Dashboard streaks={streaks} onCheckIn={checkIn} setView={setView} setShowCreate={setShowCreate} showToast={showToast} totalXp={totalXp} user={user} />}
+        {view === 'habits' && <HabitsView streaks={streaks} onDelete={del} onFreeze={freeze} setShowCreate={setShowCreate} showToast={showToast} />}
+        {view === 'analytics' && <AnalyticsView streaks={streaks} />}
+        {view === 'achievements' && <AchievementsView streaks={streaks} totalXp={totalXp} />}
+        {view === 'coach' && <CoachView streaks={streaks} />}
+      </main>
+
+      {showCreate && <CreateModal onClose={() => setShowCreate(false)} onCreate={addStreak} />}
+      {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>
