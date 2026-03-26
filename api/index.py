@@ -30,18 +30,7 @@ if TURSO_AUTH_TOKEN:
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set")
 
-try:
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        connect_args={"check_same_thread": False}
-    )
-except Exception as e:
-    print(f"Warning: Engine creation error: {e}")
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False}
-    )
+engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -141,6 +130,18 @@ def on_startup():
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"Warning: Could not create tables: {e}")
+
+@app.get("/health")
+def health_check():
+    """Debug endpoint to check if the function loads and DB connects."""
+    info = {"status": "ok", "db_url_prefix": DATABASE_URL[:30] + "...", "token_set": bool(TURSO_AUTH_TOKEN)}
+    try:
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+        info["db_connection"] = "success"
+    except Exception as e:
+        info["db_connection"] = f"failed: {str(e)}"
+    return info
 
 app.add_middleware(
     CORSMiddleware,
