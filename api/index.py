@@ -1,17 +1,17 @@
 import os
+import json
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, JSON
-from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from mangum import Mangum
+import libsql_experimental as libsql
 
-# --- Settings & Database Config ---
+# --- Settings ---
 SECRET_KEY = os.environ.get("SECRET_KEY", "super_secret_key_change_in_production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
@@ -19,21 +19,42 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 DATABASE_URL = os.environ.get("DATABASE_URL", "libsql://streakforge-bharath-vk-18.aws-ap-south-1.turso.io")
 TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
 
-# Turso uses libsql:// but SQLAlchemy needs sqlite+libsql:// prefix
-if DATABASE_URL.startswith("libsql://"):
-    DATABASE_URL = DATABASE_URL.replace("libsql://", "sqlite+libsql://", 1)
+# --- Database Connection ---
+def get_connection():
+    return libsql.connect(DATABASE_URL, auth_token=TURSO_AUTH_TOKEN)
 
-# Append auth token if available
-if TURSO_AUTH_TOKEN:
-    DATABASE_URL = f"{DATABASE_URL}?authToken={TURSO_AUTH_TOKEN}"
+def init_db():
+    conn = get_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            hashed_password TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS streaks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            category TEXT,
+            icon TEXT,
+            color TEXT,
+            frequency TEXT,
+            reminderTime TEXT,
+            active INTEGER DEFAULT 1,
+            startDate TEXT,
+            history TEXT DEFAULT '{}',
+            freezesLeft INTEGER DEFAULT 3,
+            user_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+    conn.commit()
 
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL is not set")
-
-engine = create_engine(DATABASE_URL)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+try:
+    init_db()
+except Exception as e:
+    print(f"Warning: DB init error (will retry on first request): {e}")
 
 # --- Auth Utils ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -50,33 +71,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-# --- Database Models ---
-class UserDB(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    streaks = relationship("StreakDB", back_populates="owner")
-
-class StreakDB(Base):
-    __tablename__ = "streaks"
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    category = Column(String)
-    icon = Column(String)
-    color = Column(String)
-    frequency = Column(String)
-    reminderTime = Column(String)
-    active = Column(Boolean, default=True)
-    startDate = Column(String)
-    history = Column(JSON, default=dict)
-    freezesLeft = Column(Integer, default=3)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    
-    owner = relationship("UserDB", back_populates="streaks")
-
-# Table creation deferred to startup event for serverless compatibility
 
 # --- Pydantic Schemas ---
 class UserCreate(BaseModel):
@@ -118,30 +112,8 @@ class StreakResponse(StreakBase):
     history: Dict[str, bool]
     freezesLeft: int
 
-    class Config:
-        from_attributes = True
-
 # --- FastAPI App ---
 app = FastAPI(title="StreakForge API")
-
-@app.on_event("startup")
-def on_startup():
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"Warning: Could not create tables: {e}")
-
-@app.get("/health")
-def health_check():
-    """Debug endpoint to check if the function loads and DB connects."""
-    info = {"status": "ok", "db_url_prefix": DATABASE_URL[:30] + "...", "token_set": bool(TURSO_AUTH_TOKEN)}
-    try:
-        with engine.connect() as conn:
-            conn.execute("SELECT 1")
-        info["db_connection"] = "success"
-    except Exception as e:
-        info["db_connection"] = f"failed: {str(e)}"
-    return info
 
 app.add_middleware(
     CORSMiddleware,
@@ -151,15 +123,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+# --- Helper to get current user from token ---
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -172,78 +137,141 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = db.query(UserDB).filter(UserDB.username == username).first()
-    if user is None:
+    
+    conn = get_connection()
+    result = conn.execute("SELECT id, username FROM users WHERE username = ?", [username]).fetchone()
+    if result is None:
         raise credentials_exception
-    return user
+    return {"id": result[0], "username": result[1]}
+
+# --- Helper to convert DB row to streak dict ---
+def row_to_streak(row):
+    return {
+        "id": row[0],
+        "title": row[1],
+        "category": row[2],
+        "icon": row[3],
+        "color": row[4],
+        "frequency": row[5],
+        "reminderTime": row[6],
+        "active": bool(row[7]),
+        "startDate": row[8],
+        "history": json.loads(row[9]) if row[9] else {},
+        "freezesLeft": row[10],
+        "user_id": row[11],
+    }
+
+# --- Health Check ---
+@app.get("/health")
+def health_check():
+    info = {"status": "ok", "token_set": bool(TURSO_AUTH_TOKEN)}
+    try:
+        conn = get_connection()
+        conn.execute("SELECT 1")
+        info["db_connection"] = "success"
+    except Exception as e:
+        info["db_connection"] = f"failed: {str(e)}"
+    return info
 
 # --- Auth Routes ---
 @app.post("/register", response_model=Token)
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    if db.query(UserDB).filter(UserDB.username == user.username).first():
+def register(user: UserCreate):
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM users WHERE username = ?", [user.username]).fetchone()
+    if existing:
         raise HTTPException(status_code=400, detail="Username already registered")
     
-    db_user = UserDB(username=user.username, hashed_password=get_password_hash(user.password))
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    hashed = get_password_hash(user.password)
+    conn.execute("INSERT INTO users (username, hashed_password) VALUES (?, ?)", [user.username, hashed])
+    conn.commit()
     
-    access_token = create_access_token(data={"sub": db_user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    result = conn.execute("SELECT id, username FROM users WHERE username = ?", [user.username]).fetchone()
+    access_token = create_access_token(data={"sub": result[1]}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/token", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(UserDB).filter(UserDB.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    conn = get_connection()
+    result = conn.execute("SELECT id, username, hashed_password FROM users WHERE username = ?", [form_data.username]).fetchone()
+    if not result or not verify_password(form_data.password, result[2]):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
-    access_token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    access_token = create_access_token(data={"sub": result[1]}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me")
-def read_users_me(current_user: UserDB = Depends(get_current_user)):
-    return {"id": current_user.id, "username": current_user.username}
+def read_users_me(current_user: dict = Depends(get_current_user)):
+    return {"id": current_user["id"], "username": current_user["username"]}
 
 # --- Streak Routes ---
-@app.get("/api/streaks", response_model=List[StreakResponse])
-def get_streaks(current_user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(StreakDB).filter(StreakDB.user_id == current_user.id).all()
+@app.get("/api/streaks")
+def get_streaks(current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, title, category, icon, color, frequency, reminderTime, active, startDate, history, freezesLeft, user_id FROM streaks WHERE user_id = ?",
+        [current_user["id"]]
+    ).fetchall()
+    return [row_to_streak(row) for row in rows]
 
-@app.post("/api/streaks", response_model=StreakResponse)
-def create_streak(streak: StreakCreate, current_user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_streak = StreakDB(
-        **streak.dict(),
-        user_id=current_user.id,
-        active=True,
-        freezesLeft=3
+@app.post("/api/streaks")
+def create_streak(streak: StreakCreate, current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    history_json = json.dumps(streak.history)
+    conn.execute(
+        "INSERT INTO streaks (title, category, icon, color, frequency, reminderTime, active, startDate, history, freezesLeft, user_id) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, 3, ?)",
+        [streak.title, streak.category, streak.icon, streak.color, streak.frequency, streak.reminderTime, streak.startDate, history_json, current_user["id"]]
     )
-    db.add(db_streak)
-    db.commit()
-    db.refresh(db_streak)
-    return db_streak
+    conn.commit()
+    
+    row = conn.execute(
+        "SELECT id, title, category, icon, color, frequency, reminderTime, active, startDate, history, freezesLeft, user_id FROM streaks WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+        [current_user["id"]]
+    ).fetchone()
+    return row_to_streak(row)
 
-@app.put("/api/streaks/{streak_id}", response_model=StreakResponse)
-def update_streak(streak_id: int, streak_update: StreakUpdate, current_user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_streak = db.query(StreakDB).filter(StreakDB.id == streak_id, StreakDB.user_id == current_user.id).first()
-    if not db_streak:
+@app.put("/api/streaks/{streak_id}")
+def update_streak(streak_id: int, streak_update: StreakUpdate, current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM streaks WHERE id = ? AND user_id = ?", [streak_id, current_user["id"]]).fetchone()
+    if not existing:
         raise HTTPException(status_code=404, detail="Streak not found")
-        
+    
     update_data = streak_update.dict(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    set_parts = []
+    values = []
     for key, value in update_data.items():
-        setattr(db_streak, key, value)
-        
-    db.commit()
-    db.refresh(db_streak)
-    return db_streak
+        if key == "history":
+            set_parts.append(f"{key} = ?")
+            values.append(json.dumps(value))
+        elif key == "active":
+            set_parts.append(f"{key} = ?")
+            values.append(1 if value else 0)
+        else:
+            set_parts.append(f"{key} = ?")
+            values.append(value)
+    
+    values.extend([streak_id, current_user["id"]])
+    conn.execute(f"UPDATE streaks SET {', '.join(set_parts)} WHERE id = ? AND user_id = ?", values)
+    conn.commit()
+    
+    row = conn.execute(
+        "SELECT id, title, category, icon, color, frequency, reminderTime, active, startDate, history, freezesLeft, user_id FROM streaks WHERE id = ? AND user_id = ?",
+        [streak_id, current_user["id"]]
+    ).fetchone()
+    return row_to_streak(row)
 
 @app.delete("/api/streaks/{streak_id}")
-def delete_streak(streak_id: int, current_user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_streak = db.query(StreakDB).filter(StreakDB.id == streak_id, StreakDB.user_id == current_user.id).first()
-    if not db_streak:
+def delete_streak(streak_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM streaks WHERE id = ? AND user_id = ?", [streak_id, current_user["id"]]).fetchone()
+    if not existing:
         raise HTTPException(status_code=404, detail="Streak not found")
-        
-    db.delete(db_streak)
-    db.commit()
+    
+    conn.execute("DELETE FROM streaks WHERE id = ? AND user_id = ?", [streak_id, current_user["id"]])
+    conn.commit()
     return {"status": "success"}
 
 # --- Vercel Serverless Handler ---
